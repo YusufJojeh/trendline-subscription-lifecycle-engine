@@ -1,0 +1,311 @@
+{
+  "info": {
+    "_postman_id": "6ac59dd8-cdf9-4e34-a936-1a69eb53b1c2",
+    "name": "Subscription Lifecycle Engine",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Variables match `SubscriptionEngineDemoSeeder` after `php artisan migrate:fresh --seed` on an empty DB: plans 1=algo-pro / 2=algo-core, planPriceId 1=pro monthly AED 9900, users 1=reviewer / 2=pastdue, subscriptions 1=trialing / 2=active / 3=past_due (grace open). Re-run Create Plan / Add Price against plan 1 after seed will 422 on unique constraints."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api/v1",
+      "description": "Laravel API base URL."
+    },
+    {
+      "key": "planId",
+      "value": "1",
+      "description": "Seeded `algo-pro` plan."
+    },
+    {
+      "key": "planPriceId",
+      "value": "1",
+      "description": "Seeded monthly AED price for `algo-pro`."
+    },
+    {
+      "key": "trialSubscriptionId",
+      "value": "1",
+      "description": "Seeded trialing subscription."
+    },
+    {
+      "key": "activeSubscriptionId",
+      "value": "2",
+      "description": "Seeded active subscription."
+    },
+    {
+      "key": "pastDueSubscriptionId",
+      "value": "3",
+      "description": "Seeded past-due subscription."
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "description": "Seeded reviewer@example.com (user id 1 after migrate:fresh --seed)."
+    },
+    {
+      "key": "pastDueUserId",
+      "value": "2",
+      "description": "Seeded pastdue@example.com (second user)."
+    }
+  ],
+  "item": [
+    {
+      "name": "Plans",
+      "item": [
+        {
+          "name": "Create Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pro\",\n  \"code\": \"pro\",\n  \"description\": \"Pro subscription plan\",\n  \"trial_days\": 14,\n  \"is_active\": true\n}"
+            },
+            "url": "{{baseUrl}}/plans"
+          }
+        },
+        {
+          "name": "List Plans",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/plans"
+          }
+        },
+        {
+          "name": "Show Plan",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/plans/{{planId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pricing",
+      "item": [
+        {
+          "name": "Add Monthly AED Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"billing_cycle\": \"monthly\",\n  \"currency\": \"AED\",\n  \"amount_minor\": 9900,\n  \"is_active\": true\n}"
+            },
+            "url": "{{baseUrl}}/plans/{{planId}}/prices"
+          }
+        },
+        {
+          "name": "Add Yearly USD Price",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"billing_cycle\": \"yearly\",\n  \"currency\": \"USD\",\n  \"amount_minor\": 99900,\n  \"is_active\": true\n}"
+            },
+            "url": "{{baseUrl}}/plans/{{planId}}/prices"
+          }
+        },
+        {
+          "name": "List Plan Prices",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/plans/{{planId}}/prices"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subscriptions",
+      "item": [
+        {
+          "name": "Start Subscription With Trial",
+          "request": {
+            "method": "POST",
+            "description": "Starts a new subscription for the seeded reviewer using the seeded `algo-pro` monthly AED price.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{userId}},\n  \"plan_price_id\": {{planPriceId}}\n}"
+            },
+            "url": "{{baseUrl}}/subscriptions"
+          }
+        },
+        {
+          "name": "View Subscription",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/subscriptions/{{trialSubscriptionId}}"
+          }
+        },
+        {
+          "name": "Verify Access State",
+          "request": {
+            "method": "GET",
+            "description": "Returns whether access is currently granted and why, based on lifecycle status and time windows.",
+            "url": "{{baseUrl}}/subscriptions/{{trialSubscriptionId}}/access"
+          }
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "description": "Cancels the seeded active subscription (id 2). Run after payment/grace demos if you still need that row active.",
+            "url": "{{baseUrl}}/subscriptions/{{activeSubscriptionId}}/cancel"
+          }
+        },
+        {
+          "name": "View past-due subscription (seeded)",
+          "request": {
+            "method": "GET",
+            "description": "Third seeded row: pastdue@example.com, grace still open, failed attempt seed-failed-payment-001.",
+            "url": "{{baseUrl}}/subscriptions/{{pastDueSubscriptionId}}"
+          }
+        },
+        {
+          "name": "Past-due access (seeded)",
+          "request": {
+            "method": "GET",
+            "description": "Expect granted=true while grace_period_ends_at is in the future (seed anchor 2026-04-07).",
+            "url": "{{baseUrl}}/subscriptions/{{pastDueSubscriptionId}}/access"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Record Failed Payment",
+          "request": {
+            "method": "POST",
+            "description": "Moves an active subscription into `past_due` and starts the 3-day grace period.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription_id\": {{activeSubscriptionId}},\n  \"amount_minor\": 9900,\n  \"currency\": \"AED\",\n  \"idempotency_key\": \"payment-failure-001\",\n  \"provider_reference\": \"provider-failure-001\",\n  \"attempted_at\": \"2026-04-07T10:00:00Z\",\n  \"failure_reason\": \"Card declined\",\n  \"metadata\": {\n    \"source\": \"postman\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/payments/failure"
+          }
+        },
+        {
+          "name": "Record Successful Payment",
+          "request": {
+            "method": "POST",
+            "description": "Records a successful payment and activates or recovers the targeted subscription.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription_id\": {{activeSubscriptionId}},\n  \"amount_minor\": 9900,\n  \"currency\": \"AED\",\n  \"idempotency_key\": \"payment-success-001\",\n  \"provider_reference\": \"provider-success-001\",\n  \"attempted_at\": \"2026-04-07T10:00:00Z\",\n  \"metadata\": {\n    \"source\": \"postman\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/payments/success"
+          }
+        },
+        {
+          "name": "List Payment Attempts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/subscriptions/{{activeSubscriptionId}}/payment-attempts"
+          }
+        },
+        {
+          "name": "List Payment Attempts (past-due user)",
+          "request": {
+            "method": "GET",
+            "description": "Shows the seeded failed attempt on subscription 3.",
+            "url": "{{baseUrl}}/subscriptions/{{pastDueSubscriptionId}}/payment-attempts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle Flows",
+      "item": [
+        {
+          "name": "Trial To Active",
+          "request": {
+            "method": "POST",
+            "description": "Use the seeded trialing subscription to demonstrate activation after payment.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription_id\": {{trialSubscriptionId}},\n  \"amount_minor\": 9900,\n  \"currency\": \"AED\",\n  \"idempotency_key\": \"trial-to-active-001\",\n  \"attempted_at\": \"2026-04-07T10:00:00Z\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/success"
+          }
+        },
+        {
+          "name": "Active To Past Due",
+          "request": {
+            "method": "POST",
+            "description": "Use the seeded active subscription to demonstrate failed renewal handling and grace-period entry.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription_id\": {{activeSubscriptionId}},\n  \"amount_minor\": 9900,\n  \"currency\": \"AED\",\n  \"idempotency_key\": \"active-to-past-due-001\",\n  \"attempted_at\": \"2026-04-10T10:00:00Z\",\n  \"failure_reason\": \"Insufficient funds\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/failure"
+          }
+        },
+        {
+          "name": "Past Due To Active Recovery",
+          "request": {
+            "method": "POST",
+            "description": "Use the seeded active subscription after a failed payment to demonstrate recovery during grace.",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subscription_id\": {{activeSubscriptionId}},\n  \"amount_minor\": 9900,\n  \"currency\": \"AED\",\n  \"idempotency_key\": \"past-due-recovery-001\",\n  \"attempted_at\": \"2026-04-11T10:00:00Z\"\n}"
+            },
+            "url": "{{baseUrl}}/payments/success"
+          }
+        }
+      ]
+    }
+  ]
+}

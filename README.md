@@ -1,5 +1,58 @@
 # Trendline Subscription Lifecycle Engine
 
+## Status
+
+Public repo / local build — This is a REST API intended for local evaluation.
+
+## Problem
+
+Subscription billing needs consistent state changes when payments succeed, fail or arrive more than once. Access checks and reconciliation must agree on trial, active and grace-period rules.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Client --> API["Laravel API and module actions"]
+  API --> DB["Database transaction and row locks"]
+  API --> Outbox["outbox_messages table"]
+  API --> Queue["Queued lifecycle log events"]
+```
+
+## Key decisions
+
+- Idempotency keys collapse payment retries to one result, rejecting reuse with a different payload.
+- Row locks serialize lifecycle changes on a subscription, trading throughput for coherent state transitions.
+- Outbox rows are written in the same transaction as state changes, improving traceability while requiring a future publisher to deliver them to a bus.
+
+## Run locally
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate:fresh --seed
+php artisan serve
+# In another terminal:
+php artisan queue:work --tries=1
+```
+
+## Tests
+
+```bash
+php artisan test
+```
+
+Count omitted: PHP is not installed in this session.
+
+## Limitations
+
+- The API has no authentication or user interface.
+- The outbox table is not read by a publisher in this repository.
+
+---
+
+## Existing project documentation
+
 Laravel 12 API for subscription plans, prices, payments, state changes, access checks, and a daily reconciliation command.
 
 What’s in the box: REST API only (no auth, no UI), code split under `app/Modules`, idempotent payment writes, row lock on the subscription during payment handling, status history, `outbox_messages` rows in the same DB transaction as lifecycle updates, queued log lines for lifecycle events, seed data, and PHPUnit coverage.

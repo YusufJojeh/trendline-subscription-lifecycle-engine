@@ -1,3 +1,21 @@
+# Subscription Lifecycle Exercise
+
+## Problem
+
+Subscription access must remain consistent when payments fail, arrive late, or are repeated.
+
+## Architecture
+
+Laravel modules separate plans, subscriptions, payments, lifecycle, and audit concerns inside one application. Transactions and row locks protect state changes. Idempotency keys deduplicate attempts. History and outbox rows capture transitions; queued events provide lifecycle logging.
+
+## Stack
+
+PHP 8.2+, Laravel 12, relational database, PHPUnit, Laravel queues.
+
+> This overview describes the repository scope. See the existing documentation below for setup, configuration, and verification requirements.
+
+---
+
 # Trendline Subscription Lifecycle Engine
 
 ## Status
